@@ -26,7 +26,7 @@ rough_date = datetime(2022, 1, 1, 0, 0, 0)
 
 def get_mastodon_bookmarks_from_mastodon():
     # This function just queries all bookmarks. I intend for this to be used infrequently with get_mastodon_bookmarks_from_mastodon_since_id preferred instead
-    bookmarks = get_mastodon_bookmarks_from_mastodon_from_min_id(0, bookmark_limit=4)
+    bookmarks = get_mastodon_bookmarks_from_mastodon_from_min_id(0)
     return bookmarks
 
 
@@ -38,12 +38,32 @@ def get_mastodon_bookmarks_from_mastodon_from_min_id(bookmark_min_id, bookmark_l
         bookmarks = mastodon.bookmarks(min_id = bookmark_min_id, limit = bookmark_limit)
     return bookmarks
 
+def get_min_id_from_db():
+    bookmark_min_id = 0
+    result = mastodon_internal_identifiers.find_one({"type": "bookmark_min_id"})
+    if result is not None:
+        bookmark_min_id = result['value']
+    return bookmark_min_id
 
-bookmarks = get_mastodon_bookmarks_from_mastodon()
-# # bookmarks = get_mastodon_bookmarks_from_mastodon_since_id('46')
-print(bookmarks._pagination_prev)
-print(bookmarks._pagination_next)
-print(bookmarks)
+def update_min_id_on_db(bookmark_min_id):
+    success = False
+
+    return success
+
+
+
+bookmark_min_id = get_min_id_from_db()
+
+
+
+
+
+# bookmarks = get_mastodon_bookmarks_from_mastodon()
+# print(bookmarks._pagination_prev)
+# print(bookmarks._pagination_next)
+# print(bookmarks)
+
+
 # print(len(bookmarks))
 # for bookmark in bookmarks:
 #     # print(bookmark)
