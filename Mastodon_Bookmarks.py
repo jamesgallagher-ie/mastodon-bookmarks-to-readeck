@@ -25,26 +25,25 @@ mongodb_mastodon_bookmarks = db.bookmarks
 rough_date = datetime(2022, 1, 1, 0, 0, 0)
 
 def get_mastodon_bookmarks_from_mastodon():
-    # This function just queries all bookmaarks. I intend for this to be used infrequently with get_mastodon_bookmarks_from_mastodon_since_id preferred instead
-    print('called get_mastodon_bookmarks_from_mastodon')
-    bookmarks = mastodon.bookmarks(limit = 40, min_id = 1)
-
+    # This function just queries all bookmarks. I intend for this to be used infrequently with get_mastodon_bookmarks_from_mastodon_since_id preferred instead
+    bookmarks = get_mastodon_bookmarks_from_mastodon_from_min_id(0, bookmark_limit=4)
     return bookmarks
 
 
-def get_mastodon_bookmarks_from_mastodon_since_id(bookmark_internal_id):
-    # This functions queries bookmarks since the specified internal bookmark_id and is intended to be the way I'll get incremental bookmark
-    print('called get_mastodon_bookmarks_from_mastodon_since_id(bookmark_id)')
-    # 114719202162983446
-    bookmarks = mastodon.bookmarks(min_id = bookmark_internal_id, limit = 40)
-
+def get_mastodon_bookmarks_from_mastodon_from_min_id(bookmark_min_id, bookmark_limit=40, bookmark_max_id=None):
+    # This functions queries bookmarks after this internal min_id and is intended to be the way I'll get incremental bookmarks
+    if bookmark_max_id is not None:
+        bookmarks = mastodon.bookmarks(min_id = bookmark_min_id, max_id = bookmark_max_id)
+    else:
+        bookmarks = mastodon.bookmarks(min_id = bookmark_min_id, limit = bookmark_limit)
     return bookmarks
 
 
-# bookmarks = get_mastodon_bookmarks_from_mastodon()
+bookmarks = get_mastodon_bookmarks_from_mastodon()
 # # bookmarks = get_mastodon_bookmarks_from_mastodon_since_id('46')
-# print(bookmarks._pagination_prev)
-# print(bookmarks._pagination_next)
+print(bookmarks._pagination_prev)
+print(bookmarks._pagination_next)
+print(bookmarks)
 # print(len(bookmarks))
 # for bookmark in bookmarks:
 #     # print(bookmark)
