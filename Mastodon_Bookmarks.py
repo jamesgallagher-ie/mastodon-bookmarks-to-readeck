@@ -3,6 +3,7 @@ from datetime import datetime
 from dotenv import dotenv_values
 from pymongo import MongoClient
 from pymongo import errors
+import json
 
 # Config
   # Mastodon
@@ -36,7 +37,7 @@ def get_mastodon_bookmarks_from_mastodon_from_min_id(bookmark_min_id, bookmark_l
         bookmarks = mastodon.bookmarks(min_id = bookmark_min_id, max_id = bookmark_max_id)
     else:
         bookmarks = mastodon.bookmarks(min_id = bookmark_min_id, limit = bookmark_limit)
-    return bookmarks
+    return bookmarks.to_json()
 
 def get_min_id_from_db():
     bookmark_min_id = 0
@@ -50,10 +51,33 @@ def update_min_id_on_db(bookmark_min_id):
 
     return success
 
+def are_there_more_bookmarks(bookmark_pagination): 
+    more = False
+    more_pages_text = "_pagination_next"
+    if more_pages_text in bookmark_pagination.keys():
+        more = True    
+    return more
+
+    
+
 
 
 bookmark_min_id = get_min_id_from_db()
 
+# Mastodon Query 
+bookmarks = get_mastodon_bookmarks_from_mastodon_from_min_id(bookmark_min_id, bookmark_limit=5)
+print(bookmarks)
+bookmark_json = json.loads(bookmarks)
+bookmark_data = bookmark_json['_mastopy_data']
+bookmark_pagination = bookmark_json['_mastopy_extra_data']
+
+more = are_there_more_bookmarks(bookmark_pagination)
+
+# persist the results
+# result = mongodb_mastodon_bookmarks.insert_many(bookmark_data)
+# print(result)
+
+# update the bookmark_min_id value
 
 
 
