@@ -48,6 +48,12 @@ def get_min_id_from_db():
 
 def update_min_id_on_db(bookmark_min_id):
     success = False
+    try:
+        result = mastodon_internal_identifiers.update_one({"type": "bookmark_min_id"}, { "$set": { "value": bookmark_min_id } } )
+        if result.matched_count == 1 and result.modified_count == 1:
+            success = True
+    except Exception as e:
+          print("An exception occurred ::", e)
 
     return success
 
@@ -58,53 +64,45 @@ def are_there_more_bookmarks(bookmark_pagination):
         more = True    
     return more
 
-    
+def get_URIs_from_db():
+    uris = []
+    results = mongodb_mastodon_bookmarks.find({ "uri": { "$exists": True} })
+    for result in results:
+        uris.append(result['uri'])
+    return uris
+
+def parse_and_persist_bookmarks(bookmark_data):
+  # Horrible duplicate checking
+  # I'm thinking of using the URI and just getting a list of those already in the DB to check against
+  bookmark_persist_success = True
+  for bookmark in bookmark_data:
+      if bookmark['uri'] not in current_URIs:
+          try:
+            results = mongodb_mastodon_bookmarks.insert_one(bookmark)
+            current_URIs.append(bookmark['uri'])
+          except Exception as e:
+            print("An exception occurred ::", e)
+            bookmark_persist_success = False
+  return bookmark_persist_success  
 
 
-
-bookmark_min_id = get_min_id_from_db()
-
-# Mastodon Query 
-bookmarks = get_mastodon_bookmarks_from_mastodon_from_min_id(bookmark_min_id, bookmark_limit=5)
-print(bookmarks)
-bookmark_json = json.loads(bookmarks)
-bookmark_data = bookmark_json['_mastopy_data']
-bookmark_pagination = bookmark_json['_mastopy_extra_data']
-
-more = are_there_more_bookmarks(bookmark_pagination)
-
-# persist the results
-# result = mongodb_mastodon_bookmarks.insert_many(bookmark_data)
-# print(result)
-
-# update the bookmark_min_id value
+more = True
 
 
+while more:
+  # MongoDB Query for existing URIs
+  current_URIs = get_URIs_from_db()
+  bookmark_min_id = get_min_id_from_db()
+  # Mastodon Query 
+  bookmarks = get_mastodon_bookmarks_from_mastodon_from_min_id(bookmark_min_id)
+  # print(bookmarks)
+  bookmark_json = json.loads(bookmarks)
+  bookmark_data = bookmark_json['_mastopy_data']
+  bookmark_pagination = bookmark_json['_mastopy_extra_data']
 
-
-# bookmarks = get_mastodon_bookmarks_from_mastodon()
-# print(bookmarks._pagination_prev)
-# print(bookmarks._pagination_next)
-# print(bookmarks)
-
-
-# print(len(bookmarks))
-# for bookmark in bookmarks:
-#     # print(bookmark)
-# #     # print(bookmark['content'])
-#     # print("\n")
-# #     # print(bookmark['url'], bookmark['content'])
-#     print(bookmark['id'], bookmark['url'])
-
-# # statuses = get_statuses()
-# # print(statuses._pagination_prev)
-# print("next")
-# next = mastodon.fetch_next(previous_page = bookmarks._pagination_next)
-# for b in next:
-#     print(b['id'], b['url'])
-# previous = mastodon.fetch_previous(next_page = bookmarks._pagination_next)
-# print(previous._pagination_next)
-# again = mastodon.fetch_previous(next_page = previous._pagination_next)
-# print(again._pagination_next)
-# again2 = mastodon.fetch_previous(next_page = again._pagination_next)
-# print(again2._pagination_next)
+  bookmark_persist_success = parse_and_persist_bookmarks(bookmark_data)
+  # update the bookmark_min_id value
+  if (bookmark_persist_success):
+      if bool(bookmark_pagination):
+        update_min_id_on_db(bookmark_pagination['_pagination_prev']['min_id'])
+      more = are_there_more_bookmarks(bookmark_pagination)
