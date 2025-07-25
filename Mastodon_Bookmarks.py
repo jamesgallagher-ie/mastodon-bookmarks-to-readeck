@@ -23,8 +23,6 @@ mastodon_internal_identifiers = db.internal_identifiers
 mongodb_mastodon_bookmarks = db.bookmarks
 # End of DB connections
 
-rough_date = datetime(2022, 1, 1, 0, 0, 0)
-
 def get_mastodon_bookmarks_from_mastodon():
     # This function just queries all bookmarks. I intend for this to be used infrequently with get_mastodon_bookmarks_from_mastodon_since_id preferred instead
     bookmarks = get_mastodon_bookmarks_from_mastodon_from_min_id(0)
