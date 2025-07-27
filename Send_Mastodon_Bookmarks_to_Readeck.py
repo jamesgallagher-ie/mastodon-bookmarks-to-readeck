@@ -6,10 +6,14 @@ from pymongo import errors
 
 
 # Establish a connection to Readeck to get my Mastodon Bookmarks collection, find bookmarks already added and then add new ones
+READECK_API_TOKEN = ""
+READECK_API_URL = ""
+READECK_MASTODON_BOOKMARKS_COLLECTION_ID = ""
 readeck_env = dotenv_values(".readeck_env")
-READECK_API_TOKEN=readeck_env['READECK_API_TOKEN']
-READECK_API_URL=readeck_env['READECK_API_URL']
-READECK_MASTODON_BOOKMARKS_COLLECTION_ID=readeck_env['READECK_MASTODON_BOOKMARKS_COLLECTION_ID']
+if readeck_env:
+    READECK_API_TOKEN=readeck_env['READECK_API_TOKEN']
+    READECK_API_URL=readeck_env['READECK_API_URL']
+    READECK_MASTODON_BOOKMARKS_COLLECTION_ID=readeck_env['READECK_MASTODON_BOOKMARKS_COLLECTION_ID']
 
 mongodb_config = dotenv_values(".env")
 # mongodb+srv://<username>:<password>@cluster0-hars.tkhxr.mongodb.net/?retryWrites=true&w=majority
@@ -17,36 +21,40 @@ mongo_connection_protocol = 'mongodb://'
 mongo_connection_string = (mongo_connection_protocol + mongodb_config['MONGO_USER'] + ':'
  + mongodb_config['MONGO_PASSWORD'] + '@' + mongodb_config["MONGO_URI"] )
 
+def have_all_readeck_config():
+    all_config_available = False
+    if READECK_API_TOKEN is not None or READECK_API_TOKEN != "":
+        if READECK_API_URL is not None or READECK_API_URL != "":
+            if READECK_MASTODON_BOOKMARKS_COLLECTION_ID is not None or READECK_MASTODON_BOOKMARKS_COLLECTION_ID != "":
+                all_config_available = True
+    return all_config_available
 
 
 def get_existing_readeck_mastodon_bookmark_urls():
     bookmark_urls=[]
     more = True
     offset = 0
-    if READECK_API_TOKEN is not None or READECK_API_TOKEN != "":
-        if READECK_API_URL is not None or READECK_API_URL != "":
-            if READECK_MASTODON_BOOKMARKS_COLLECTION_ID is not None or READECK_MASTODON_BOOKMARKS_COLLECTION_ID != "":
-                # ready to make API calls
-                headers = {
-                    'Authorization': 'Bearer ' + READECK_API_TOKEN
-                }
-                while more:
-                    READECK_BOOKMARK_LIST_URL = READECK_API_URL + "/bookmarks" + "?" + "collection=" + READECK_MASTODON_BOOKMARKS_COLLECTION_ID + "&" + "offset=" + str(offset)
-                    response = requests.get(READECK_BOOKMARK_LIST_URL, headers=headers)
-                    if response.status_code == 200:
-                        if "application/json" in response.headers['Content-Type']:
-                            bookmarks = response.json()
-                            for bookmark in bookmarks:
-                                bookmark_urls.append(bookmark['url'])
-                        total_count = response.headers.get('Total-Count', None)
-                        count_of_bookmarks = len(bookmark_urls)
-                        # print(count_of_bookmarks, total_count)
-                        if count_of_bookmarks < int(total_count):
-                            offset = offset + 50
-                            more = True
-                        elif count_of_bookmarks >= int(total_count):  
-                            more = False
-    
+    if have_all_readeck_config():
+        # ready to make API calls
+        headers = {
+            'Authorization': 'Bearer ' + READECK_API_TOKEN
+        }
+        while more:
+            READECK_BOOKMARK_LIST_URL = READECK_API_URL + "/bookmarks" + "?" + "collection=" + READECK_MASTODON_BOOKMARKS_COLLECTION_ID + "&" + "offset=" + str(offset)
+            response = requests.get(READECK_BOOKMARK_LIST_URL, headers=headers)
+            if response.status_code == 200:
+                if "application/json" in response.headers['Content-Type']:
+                    bookmarks = response.json()
+                    for bookmark in bookmarks:
+                        bookmark_urls.append(bookmark['url'])
+                total_count = response.headers.get('Total-Count', None)
+                count_of_bookmarks = len(bookmark_urls)
+                # print(count_of_bookmarks, total_count)
+                if count_of_bookmarks < int(total_count):
+                    offset = offset + 50
+                    more = True
+                elif count_of_bookmarks >= int(total_count):  
+                    more = False
     return bookmark_urls
 
 def get_URLs_from_db():
@@ -85,31 +93,29 @@ def get_existing_readeck_mastodon_bookmark_uids(filter_errored_bookmarks=None):
     elif not filter_errored_bookmarks:
         filter_errored = 'false'
         
-    if READECK_API_TOKEN is not None or READECK_API_TOKEN != "":
-        if READECK_API_URL is not None or READECK_API_URL != "":
-            if READECK_MASTODON_BOOKMARKS_COLLECTION_ID is not None or READECK_MASTODON_BOOKMARKS_COLLECTION_ID != "":
-                # ready to make API calls
-                headers = {
-                    'Authorization': 'Bearer ' + READECK_API_TOKEN
-                }
-                while more:
-                    READECK_BOOKMARK_LIST_URL = READECK_API_URL + "/bookmarks" + "?" + "collection=" + READECK_MASTODON_BOOKMARKS_COLLECTION_ID + "&" + "offset=" + str(offset)
-                    if filter_errored_bookmarks:
-                        READECK_BOOKMARK_LIST_URL = READECK_BOOKMARK_LIST_URL + "&" + "has_errors=" + filter_errored
-                    response = requests.get(READECK_BOOKMARK_LIST_URL, headers=headers)
-                    if response.status_code == 200:
-                        if "application/json" in response.headers['Content-Type']:
-                            bookmarks = response.json()
-                            for bookmark in bookmarks:
-                                bookmark_uids.append(bookmark['id'])
-                        total_count = response.headers.get('Total-Count', None)
-                        count_of_bookmarks = len(bookmark_uids)
-                        # print(count_of_bookmarks, total_count)
-                        if count_of_bookmarks < int(total_count):
-                            offset = offset + 50
-                            more = True
-                        elif count_of_bookmarks >= int(total_count):  
-                            more = False
+    if have_all_readeck_config():
+        # ready to make API calls
+        headers = {
+            'Authorization': 'Bearer ' + READECK_API_TOKEN
+        }
+        while more:
+            READECK_BOOKMARK_LIST_URL = READECK_API_URL + "/bookmarks" + "?" + "collection=" + READECK_MASTODON_BOOKMARKS_COLLECTION_ID + "&" + "offset=" + str(offset)
+            if filter_errored_bookmarks:
+                READECK_BOOKMARK_LIST_URL = READECK_BOOKMARK_LIST_URL + "&" + "has_errors=" + filter_errored
+            response = requests.get(READECK_BOOKMARK_LIST_URL, headers=headers)
+            if response.status_code == 200:
+                if "application/json" in response.headers['Content-Type']:
+                    bookmarks = response.json()
+                    for bookmark in bookmarks:
+                        bookmark_uids.append(bookmark['id'])
+                total_count = response.headers.get('Total-Count', None)
+                count_of_bookmarks = len(bookmark_uids)
+                # print(count_of_bookmarks, total_count)
+                if count_of_bookmarks < int(total_count):
+                    offset = offset + 50
+                    more = True
+                elif count_of_bookmarks >= int(total_count):  
+                    more = False
     
     return bookmark_uids
 
